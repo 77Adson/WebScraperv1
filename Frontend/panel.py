@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+from pathlib import Path
 
 # --- 1. Konfiguracja Strony (Element Sprintu 1) ---
 # Ustawiamy podstawowe informacje o naszej aplikacji
@@ -11,19 +11,31 @@ st.set_page_config(
 )
 
 # --- 2. Wczytywanie Danych (Element Sprintu 1) ---
-# W pierwszym sprincie możemy użyć "mockowych" (przykładowych) danych.
+# Zamiast danych "mockowych", wczytujemy dane z pliku CSV, który jest wynikiem działania backendu.
 # Funkcja @st.cache_data zapewnia, że dane wczytają się tylko raz.
 @st.cache_data
 def load_data():
-    """Generuje przykładowy DataFrame na potrzeby demonstracji."""
-    data = {
-        'data_zdarzenia': pd.to_datetime(pd.date_range(start='2023-01-01', periods=100, freq='D')),
-        'kategoria': np.random.choice(['Sprzedaż', 'Marketing', 'Logistyka'], 100),
-        'wartosc': np.random.randint(50, 500, 100),
-        'region': np.random.choice(['Polska', 'Niemcy', 'Czechy'], 100)
-    }
-    df = pd.DataFrame(data)
-    return df
+    """Wczytuje dane z pliku CSV z backendu."""
+    # Zakładamy, że plik z danymi znajduje się w katalogu nadrzędnym w folderze 'data'
+    # Używamy pathlib dla bardziej obiektowego i czytelnego podejścia do ścieżek
+    data_path = Path(__file__).resolve().parent.parent / "data" / "scraped_data.csv"
+    
+    if not data_path.exists():
+        st.error(f"Plik z danymi nie został znaleziony! Oczekiwano go pod ścieżką: {data_path}")
+        st.info("Upewnij się, że backend (scraper) zapisał dane w odpowiednim miejscu.")
+        # Zwracamy pusty DataFrame, aby uniknąć błędów w dalszej części aplikacji
+        return pd.DataFrame({
+            'data_zdarzenia': pd.Series(dtype='datetime64[ns]'),
+            'kategoria': pd.Series(dtype='object'),
+            'wartosc': pd.Series(dtype='int'),
+            'region': pd.Series(dtype='object')
+        })
+
+    df = pd.read_csv(data_path)
+    # Konwersja kolumn na odpowiednie typy, jeśli to konieczne
+    df['data_zdarzenia'] = pd.to_datetime(df['data_zdarzenia'])
+    df['wartosc'] = pd.to_numeric(df['wartosc'])
+    return df.sort_values(by='data_zdarzenia') # Sortujemy dane po dacie
 
 df_oryginal = load_data()
 
@@ -31,10 +43,14 @@ df_oryginal = load_data()
 st.sidebar.header("Filtry Panelu")
 
 # Filtr 1: Wybór kategorii (Selectbox)
-# Pobieramy unikalne kategorie z danych
-wszystkie_kategorie = df_oryginal['kategoria'].unique()
-# Dodajemy opcję "Wszystkie", aby móc wyłączyć filtr
-opcje_kategorii = np.insert(wszystkie_kategorie, 0, 'Wszystkie')
+if not df_oryginal.empty:
+    # Pobieramy unikalne kategorie z danych
+    wszystkie_kategorie = df_oryginal['kategoria'].unique()
+    # Dodajemy opcję "Wszystkie", aby móc wyłączyć filtr
+    opcje_kategorii = ['Wszystkie'] + list(wszystkie_kategorie)
+else:
+    opcje_kategorii = ['Wszystkie']
+
 
 wybrana_kategoria = st.sidebar.selectbox(
     "Wybierz kategorię:",
@@ -42,14 +58,18 @@ wybrana_kategoria = st.sidebar.selectbox(
 )
 
 # Filtr 2: Zakres wartości (Slider)
-min_val = int(df_oryginal['wartosc'].min())
-max_val = int(df_oryginal['wartosc'].max())
+if not df_oryginal.empty:
+    min_val = int(df_oryginal['wartosc'].min())
+    max_val = int(df_oryginal['wartosc'].max())
+else:
+    min_val, max_val = 0, 1000
+
 
 zakres_wartosci = st.sidebar.slider(
     "Wybierz zakres wartości:",
     min_value=min_val,
     max_value=max_val,
-    value=(min_val, max_val)  # Domyślnie zaznaczony cały zakres
+    value=(min_val, max_val)
 )
 
 
@@ -77,10 +97,14 @@ df_filtrowane = df_filtrowane[
 st.header("Kluczowe Wskaźniki (KPIs)")
 # Używamy kolumn do ładnego wyświetlenia metryk
 col1, col2, col3 = st.columns(3)
-col1.metric("Liczba rekordów", len(df_filtrowane))
-col2.metric("Łączna wartość", f"{df_filtrowane['wartosc'].sum():,} PLN")
-col3.metric("Średnia wartość", f"{df_filtrowane['wartosc'].mean():.2f} PLN")
-
+if not df_filtrowane.empty:
+    col1.metric("Liczba rekordów", len(df_filtrowane))
+    col2.metric("Łączna wartość", f"{df_filtrowane['wartosc'].sum():,} PLN")
+    col3.metric("Średnia wartość", f"{df_filtrowane['wartosc'].mean():.2f} PLN")
+else:
+    col1.metric("Liczba rekordów", 0)
+    col2.metric("Łączna wartość", "0 PLN")
+    col3.metric("Średnia wartość", "0.00 PLN")
 
 # Wyświetlanie prostego wykresu
 st.header("Wykres wartości w czasie")
