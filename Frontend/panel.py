@@ -128,8 +128,24 @@ if not df_filtrowane.empty:
     
     with fig_col1:
         st.subheader("Trend wartości w czasie")
-        df_wykres_czas = df_filtrowane.groupby('data_zdarzenia')['wartosc'].sum().reset_index()
-        fig_czas = px.line(df_wykres_czas, x='data_zdarzenia', y='wartosc', labels={'data_zdarzenia': 'Data', 'wartosc': 'Suma wartości'})
+        # Grupujemy dane po dacie i kategorii, aby przygotować dane do facetingu
+        df_wykres_czas = df_filtrowane.groupby(['data_zdarzenia', 'kategoria'])['wartosc'].sum().reset_index()
+        
+        # Używamy facet_row do stworzenia osobnego wykresu dla każdej kategorii
+        fig_czas = px.line(
+            df_wykres_czas,
+            x='data_zdarzenia',
+            y='wartosc',
+            facet_row='kategoria', # Tworzy osobny wiersz z wykresem dla każdej kategorii
+            labels={'data_zdarzenia': 'Data', 'wartosc': 'Suma wartości', 'kategoria': 'Kategoria'},
+            # Ustawiamy mniejszy odstęp pionowy, aby uniknąć błędu przy dużej liczbie kategorii
+            facet_row_spacing=0.02,
+            markers=True # Pokazuje punkty danych, nawet jeśli jest tylko jeden
+        )
+        # Poprawiamy czytelność, ukrywając tytuły osi Y dla poszczególnych pod-wykresów
+        fig_czas.update_yaxes(title_text="")
+        # Dynamiczna wysokość, ale z ograniczeniem, aby nie była zbyt mała
+        fig_czas.update_layout(height=max(400, 200 * df_filtrowane['kategoria'].nunique()))
         st.plotly_chart(fig_czas, use_container_width=True)
         
         st.subheader("Rozkład produktów wg kategorii")
@@ -162,11 +178,3 @@ else:
         st.info("Wygląda na to, że baza danych jest pusta. Uruchom najpierw scraper, aby zebrać dane.")
         
 # --- INFORMACJE W PASKU BOCZNYM ---
-st.sidebar.info(
-    "**Jak uruchomić ten panel?**\n"
-    "1. Upewnij się, że plik `scraped_data.db` istnieje w głównym katalogu projektu.\n"
-    "2. Użyj filtrów, aby dynamicznie analizować dane.\n"
-    "3. Aby odświeżyć dane, odśwież stronę w przeglądarce."
-)
-st.sidebar.markdown("---")
-st.sidebar.markdown("Stworzone przy użyciu `Streamlit` & `Plotly`.")
