@@ -17,8 +17,12 @@ def main():
     if choice == "1":
         run_scrape_once(urls)
     elif choice == "2":
-        minutes = int(input("Co ile minut wykonywać pobranie? > "))
-        run_scheduler(urls, interval_minutes=minutes)
+        try:
+            minutes_input = input("Co ile minut wykonywać pobranie? > ")
+            minutes = int(minutes_input)
+            run_scheduler(urls, interval_minutes=minutes)
+        except ValueError:
+            print("Niepoprawna wartość. Proszę podać liczbę całkowitą.")
     else:
         print("Niepoprawny wybór.")
 
