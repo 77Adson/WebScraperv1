@@ -1,131 +1,172 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 from pathlib import Path
+import plotly.express as px
 
-# --- 1. Konfiguracja Strony (Element Sprintu 1) ---
-# Ustawiamy podstawowe informacje o naszej aplikacji
+# --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(
-    page_title="Panel Danych (Sprint 1)",
-    page_icon="📊",  # Prosta ikona
-    layout="wide"  # Używamy szerokiego layoutu dla lepszego widoku
+    page_title="Dashboard Analizy Danych",
+    page_icon="📊",
+    layout="wide"
 )
 
-# --- 2. Wczytywanie Danych (Element Sprintu 1) ---
-# Zamiast danych "mockowych", wczytujemy dane z pliku CSV, który jest wynikiem działania backendu.
-# Funkcja @st.cache_data zapewnia, że dane wczytają się tylko raz.
+# --- 2. WCZYTYWANIE DANYCH ---
 @st.cache_data
 def load_data():
-    """Wczytuje dane z pliku CSV z backendu."""
-    # Zakładamy, że plik z danymi znajduje się w katalogu nadrzędnym w folderze 'data'
-    # Używamy pathlib dla bardziej obiektowego i czytelnego podejścia do ścieżek
-    data_path = Path(__file__).resolve().parent.parent / "data" / "scraped_data.csv"
+    """Wczytuje dane z bazy danych SQLite z backendu."""
+    db_path = Path(__file__).resolve().parent.parent / "scraped_data.db"
     
-    if not data_path.exists():
-        st.error(f"Plik z danymi nie został znaleziony! Oczekiwano go pod ścieżką: {data_path}")
+    if not db_path.exists():
+        st.error(f"Plik bazy danych nie został znaleziony! Oczekiwano go pod ścieżką: {db_path}")
         st.info("Upewnij się, że backend (scraper) zapisał dane w odpowiednim miejscu.")
-        # Zwracamy pusty DataFrame, aby uniknąć błędów w dalszej części aplikacji
         return pd.DataFrame({
             'data_zdarzenia': pd.Series(dtype='datetime64[ns]'),
             'kategoria': pd.Series(dtype='object'),
-            'wartosc': pd.Series(dtype='int'),
+            'wartosc': pd.Series(dtype='float'),
             'region': pd.Series(dtype='object')
         })
+    try:
+        conn = sqlite3.connect(db_path)
+        query = "SELECT * FROM scraped_data"
+        df = pd.read_sql_query(query, conn, parse_dates=['data_zdarzenia'])
+        conn.close()
+        df['data_zdarzenia'] = pd.to_datetime(df['data_zdarzenia']).dt.date
+        return df.sort_values(by='data_zdarzenia')
+    except Exception as e:
+        st.error(f"Wystąpił błąd podczas odczytu danych z bazy SQLite: {e}")
+        return pd.DataFrame()
 
-    df = pd.read_csv(data_path)
-    # Konwersja kolumn na odpowiednie typy, jeśli to konieczne
-    df['data_zdarzenia'] = pd.to_datetime(df['data_zdarzenia'])
-    df['wartosc'] = pd.to_numeric(df['wartosc'])
-    return df.sort_values(by='data_zdarzenia') # Sortujemy dane po dacie
 
 df_oryginal = load_data()
 
-# --- 3. Pasek Boczny z Filtrami (Element Sprintu 1) ---
-st.sidebar.header("Filtry Panelu")
+# --- 3. PASEK BOCZNY Z FILTRAMI ---
+st.sidebar.header("Opcje Filtrowania")
 
-# Filtr 1: Wybór kategorii (Selectbox)
 if not df_oryginal.empty:
-    # Pobieramy unikalne kategorie z danych
-    wszystkie_kategorie = df_oryginal['kategoria'].unique()
-    # Dodajemy opcję "Wszystkie", aby móc wyłączyć filtr
-    opcje_kategorii = ['Wszystkie'] + list(wszystkie_kategorie)
+    # --- Filtr kategorii ---
+    wszystkie_kategorie = sorted(df_oryginal['kategoria'].unique())
+    wybrana_kategoria = st.sidebar.multiselect(
+        "Wybierz kategorię:",
+        options=wszystkie_kategorie,
+        default=wszystkie_kategorie
+    )
+
+    # --- Filtr regionu ---
+    wszystkie_regiony = sorted(df_oryginal['region'].unique())
+    wybrany_region = st.sidebar.multiselect(
+        "Wybierz region:",
+        options=wszystkie_regiony,
+        default=wszystkie_regiony
+    )
+
+    # --- Filtr daty ---
+    min_date = df_oryginal['data_zdarzenia'].min()
+    max_date = df_oryginal['data_zdarzenia'].max()
+    zakres_dat = st.sidebar.date_input(
+        "Wybierz zakres dat:",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+
+    # --- Filtr wartości ---
+    min_val = float(df_oryginal['wartosc'].min())
+    max_val = float(df_oryginal['wartosc'].max())
+    zakres_wartosci = st.sidebar.slider(
+        "Wybierz zakres wartości:",
+        min_value=min_val,
+        max_value=max_val,
+        value=(min_val, max_val)
+    )
+
 else:
-    opcje_kategorii = ['Wszystkie']
+    st.sidebar.warning("Brak danych do filtrowania.")
+    wybrana_kategoria = []
+    wybrany_region = []
+    zakres_dat = (None, None)
+    zakres_wartosci = (0, 1)
 
 
-wybrana_kategoria = st.sidebar.selectbox(
-    "Wybierz kategorię:",
-    options=opcje_kategorii
-)
+# --- 4. LOGIKA FILTROWANIA I GŁÓWNY PANEL ---
 
-# Filtr 2: Zakres wartości (Slider)
-if not df_oryginal.empty:
-    min_val = int(df_oryginal['wartosc'].min())
-    max_val = int(df_oryginal['wartosc'].max())
-else:
-    min_val, max_val = 0, 1000
+st.title("📊 Dashboard Analizy Danych")
+st.markdown("Interaktywny panel do wizualizacji danych zebranych przez scraper.")
 
-
-zakres_wartosci = st.sidebar.slider(
-    "Wybierz zakres wartości:",
-    min_value=min_val,
-    max_value=max_val,
-    value=(min_val, max_val)
-)
-
-
-# --- 4. Logika Filtrowania i Główny Panel (Element Sprintu 1) ---
-
-# Tytuł aplikacji
-st.title("📊 Panel Danych - Realizacja Sprintu 1")
-st.markdown("To jest podstawowa wersja panelu (MVP) pokazująca kluczowe funkcjonalności Streamlight.")
-
-# Tworzymy kopię danych do filtrowania
 df_filtrowane = df_oryginal.copy()
 
-# Aplikowanie filtra kategorii
-if wybrana_kategoria != 'Wszystkie':
-    df_filtrowane = df_filtrowane[df_filtrowane['kategoria'] == wybrana_kategoria]
+# Aplikowanie filtrów, jeśli dane istnieją
+if not df_filtrowane.empty and wybrana_kategoria and wybrany_region and len(zakres_dat) == 2:
+    df_filtrowane = df_filtrowane[df_filtrowane['kategoria'].isin(wybrana_kategoria)]
+    df_filtrowane = df_filtrowane[df_filtrowane['region'].isin(wybrany_region)]
+    df_filtrowane = df_filtrowane[
+        (df_filtrowane['data_zdarzenia'] >= zakres_dat[0]) &
+        (df_filtrowane['data_zdarzenia'] <= zakres_dat[1])
+    ]
+    df_filtrowane = df_filtrowane[
+        (df_filtrowane['wartosc'] >= zakres_wartosci[0]) &
+        (df_filtrowane['wartosc'] <= zakres_wartosci[1])
+    ]
 
-# Aplikowanie filtra wartości
-df_filtrowane = df_filtrowane[
-    (df_filtrowane['wartosc'] >= zakres_wartosci[0]) &
-    (df_filtrowane['wartosc'] <= zakres_wartosci[1])
-]
-
-# --- 5. Wyświetlanie Wyników (Element Sprintu 1) ---
-
-st.header("Kluczowe Wskaźniki (KPIs)")
-# Używamy kolumn do ładnego wyświetlenia metryk
-col1, col2, col3 = st.columns(3)
+# --- 5. WYŚWIETLANIE WYNIKÓW ---
 if not df_filtrowane.empty:
-    col1.metric("Liczba rekordów", len(df_filtrowane))
-    col2.metric("Łączna wartość", f"{df_filtrowane['wartosc'].sum():,} PLN")
-    col3.metric("Średnia wartość", f"{df_filtrowane['wartosc'].mean():.2f} PLN")
+    # --- Kluczowe wskaźniki (KPIs) ---
+    st.header("Kluczowe Wskaźniki (KPIs)")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Liczba Rekordów", f"{len(df_filtrowane):,}")
+    col2.metric("Łączna Wartość", f"{df_filtrowane['wartosc'].sum():,.2f} PLN")
+    col3.metric("Średnia Wartość", f"{df_filtrowane['wartosc'].mean():,.2f} PLN")
+    col4.metric("Liczba Kategorii", df_filtrowane['kategoria'].nunique())
+    
+    st.markdown("---")
+    
+    # --- Wizualizacje ---
+    st.header("Wizualizacje Danych")
+    
+    # Wykresy w dwóch kolumnach
+    fig_col1, fig_col2 = st.columns(2)
+    
+    with fig_col1:
+        st.subheader("Trend wartości w czasie")
+        df_wykres_czas = df_filtrowane.groupby('data_zdarzenia')['wartosc'].sum().reset_index()
+        fig_czas = px.line(df_wykres_czas, x='data_zdarzenia', y='wartosc', labels={'data_zdarzenia': 'Data', 'wartosc': 'Suma wartości'})
+        st.plotly_chart(fig_czas, use_container_width=True)
+        
+        st.subheader("Rozkład produktów wg kategorii")
+        df_wykres_kategorie_pie = df_filtrowane['kategoria'].value_counts().reset_index()
+        df_wykres_kategorie_pie.columns = ['kategoria', 'liczba']
+        fig_pie_kategoria = px.pie(df_wykres_kategorie_pie, names='kategoria', values='liczba')
+        st.plotly_chart(fig_pie_kategoria, use_container_width=True)
+        
+    with fig_col2:
+        st.subheader("Suma wartości wg kategorii")
+        df_wykres_kategorie_bar = df_filtrowane.groupby('kategoria')['wartosc'].sum().sort_values(ascending=False).reset_index()
+        fig_bar_kategoria = px.bar(df_wykres_kategorie_bar, x='wartosc', y='kategoria', orientation='h', labels={'kategoria': 'Kategoria', 'wartosc': 'Suma wartości'})
+        st.plotly_chart(fig_bar_kategoria, use_container_width=True)
+        
+        st.subheader("Liczba rekordów wg regionu")
+        df_wykres_region = df_filtrowane['region'].value_counts().reset_index()
+        df_wykres_region.columns = ['region', 'liczba']
+        fig_bar_region = px.bar(df_wykres_region, x='liczba', y='region', orientation='h', labels={'region': 'Region', 'liczba': 'Liczba rekordów'})
+        st.plotly_chart(fig_bar_region, use_container_width=True)
+        
+    st.markdown("---")
+    
+    # --- Surowe dane ---
+    st.header("Surowe dane po filtrowaniu")
+    st.dataframe(df_filtrowane, use_container_width=True)
+    
 else:
-    col1.metric("Liczba rekordów", 0)
-    col2.metric("Łączna wartość", "0 PLN")
-    col3.metric("Średnia wartość", "0.00 PLN")
-
-# Wyświetlanie prostego wykresu
-st.header("Wykres wartości w czasie")
-if not df_filtrowane.empty:
-    # Agregujemy dane, aby wykres był czytelny
-    df_wykres = df_filtrowane.groupby('data_zdarzenia')['wartosc'].sum()
-    st.line_chart(df_wykres)
-else:
-    st.warning("Brak danych do wyświetlenia dla wybranych filtrów.")
-
-# Wyświetlanie surowych danych (tabeli)
-st.header("Surowe dane po filtrowaniu")
-st.dataframe(df_filtrowane, use_container_width=True)
-
-
-# --- Instrukcja uruchomienia ---
+    st.warning("Brak danych do wyświetlenia dla wybranych filtrów. Spróbuj zmienić kryteria filtrowania.")
+    if df_oryginal.empty:
+        st.info("Wygląda na to, że baza danych jest pusta. Uruchom najpierw scraper, aby zebrać dane.")
+        
+# --- INFORMACJE W PASKU BOCZNYM ---
 st.sidebar.info(
     "**Jak uruchomić ten panel?**\n"
-    "1. Zapisz ten kod jako plik, np. `panel.py`.\n"
-    "2. Upewnij się, że masz zainstalowane biblioteki:\n"
-    "   `pip install streamlit pandas`\n"
-    "3. W terminalu uruchom polecenie:\n"
-    "   `streamlit run panel.py`"
+    "1. Upewnij się, że plik `scraped_data.db` istnieje w głównym katalogu projektu.\n"
+    "2. Użyj filtrów, aby dynamicznie analizować dane.\n"
+    "3. Aby odświeżyć dane, odśwież stronę w przeglądarce."
 )
+st.sidebar.markdown("---")
+st.sidebar.markdown("Stworzone przy użyciu `Streamlit` & `Plotly`.")

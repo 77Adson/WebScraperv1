@@ -13,7 +13,7 @@ def main():
     print("1 — Jednorazowe pobranie danych")
     print("2 — Uruchom scheduler (cykliczne pobieranie)")
     choice = input("> ")
-2
+
     if choice == "1":
         run_scrape_once(urls)
     elif choice == "2":
@@ -24,4 +24,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

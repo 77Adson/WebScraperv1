@@ -18,7 +18,6 @@ def run_scrape_once(urls: dict):
 
         products = parse_products(html)
         print(f"[{source}] Znaleziono {len(products)} produktów.")
-        save_products(products, source)
 
     print("\n===== KONIEC WYKONANIA =====\n")
 
