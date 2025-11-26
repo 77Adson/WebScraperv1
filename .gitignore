@@ -1,0 +1,20 @@
+# === Środowisko wirtualne ===
+# Ignoruj standardowe nazwy folderów dla wirtualnych środowisk Pythona
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# === Pliki baz danych ===
+# Ignoruj popularne pliki baz danych, takie jak SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Specyficzny plik bazy danych dla Django
+db.sqlite3
+
+# Zrzuty bazy danych (używaj ostrożnie, jeśli masz w repozytorium pliki .sql, które chcesz śledzić)
+# *.sql
+# *.dump
