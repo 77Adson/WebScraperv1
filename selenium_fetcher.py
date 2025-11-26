@@ -7,6 +7,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from rate_limiter import limiter
+from robot_parser import robot_manager
+from urllib.parse import urlparse
+
 
 
 # selenium_fetcher.py
@@ -45,6 +49,14 @@ def fetch_html_selenium(url, wait_selector=None, timeout=10):
     Pobiera HTML dynamicznej strony za pomocą Selenium + Firefox.
     wait_selector -> CSS selector, na który Selenium czeka (opcjonalne)
     """
+    if not robot_manager.can_fetch(url):
+        print(f"[INFO] Pobieranie {url} zabronione przez robots.txt")
+        return None
+
+    domain = urlparse(url).netloc
+    print(f"[INFO] Czekam na rate limit dla {domain}...")
+    limiter.wait(url)
+
     print(f"[Selenium] Pobieram stronę: {url}")
 
     driver = create_driver()

@@ -6,6 +6,13 @@ env/
 .env/
 ENV/
 
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+
 # === Pliki baz danych ===
 # Ignoruj popularne pliki baz danych, takie jak SQLite
 *.db
