@@ -1,10 +1,11 @@
 import requests
+from requests.exceptions import HTTPError
 from selenium_fetcher import fetch_html_selenium
 from rate_limiter import limiter
 from robot_parser import robot_manager
 from urllib.parse import urlparse
 
-def fetch_html(url):
+def fetch_html(url, retries=1):
     """
     Pobiera kod HTML z podanego adresu URL, uwzględniając robots.txt i rate limiting.
     """
@@ -21,6 +22,15 @@ def fetch_html(url):
         response = requests.get(url, timeout=10)
         response.raise_for_status()  # Rzuci wyjątkiem dla kodów 4xx/5xx
         return response.text
+    except HTTPError as e:
+        if e.response.status_code == 429:
+            print(f"[WARNING] Otrzymano błąd 429 (Too Many Requests) dla {url}.")
+            limiter.handle_error_429(url)
+            if retries > 0:
+                print("[INFO] Ponawiam próbę pobrania...")
+                return fetch_html(url, retries - 1)
+        print(f"[ERROR] Nie udało się pobrać {url}: {e}")
+        return None
     except requests.RequestException as e:
         print(f"[ERROR] Nie udało się pobrać {url}: {e}")
         return None
