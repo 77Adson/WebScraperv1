@@ -1,54 +1,88 @@
 from bs4 import BeautifulSoup
 import re
 
-def parse_price(raw_text: str) -> tuple[float, str]:
-    """Zwraca (wartość, waluta) z tekstu np. '£63.00' → (63.0, '£')."""
-    match = re.match(r"([^\d]+)?([\d.,]+)", raw_text.strip())
-    if not match:
-        return 0.0, ""
-    currency = match.group(1).strip() if match.group(1) else ""
-    value = match.group(2).replace(",", ".")
-    try:
-        price = float(value)
-    except ValueError:
-        price = 0.0
-    return price, currency
+# --- waluty ---
+def parse_price(text):
+    text = text.replace(",", ".")
+    numbers = re.findall(r"[\d.]+", text)
+    if numbers:
+        return float(numbers[0])
+    return None
 
-def parse_products(html: str) -> list[dict]:
-    """Obsługuje różne typy stron (Scrapeme i BooksToScrape)."""
-    soup = BeautifulSoup(html, "lxml")
-    products = []
+def detect_currency(text):
+    if "€" in text:
+        return "EUR"
+    if "£" in text:
+        return "GBP"
+    if "$" in text:
+        return "USD"
+    return None
 
-    # --- Scrapeme.live/shop/ ---
-    shop_a = soup.select("li.product")
+
+def parse_products(html):
+    soup = BeautifulSoup(html, "html.parser")
+
+    # --- SHOP A ---
+    shop_a = soup.select(".product")
     if shop_a:
-        for product in shop_a:
-            name = product.select_one("h2.woocommerce-loop-product__title")
-            price_el = product.select_one("span.woocommerce-Price-amount")
-            if name and price_el:
-                price_value, currency = parse_price(price_el.get_text(strip=True))
+        print("[Parser] Rozpoznano strukturę: Shop A")
+        products = []
+
+        for item in shop_a:
+            name = item.select_one(".woocommerce-loop-product__title")
+            price = item.select_one(".price")
+
+            if name and price:
+                raw_price = price.get_text(strip=True)
                 products.append({
                     "name": name.get_text(strip=True),
-                    "price": price_value,
-                    "currency": currency,
+                    "price": parse_price(raw_price),
+                    "currency": detect_currency(raw_price),
                 })
+
         return products
 
-    # --- Books.toscrape.com ---
-    shop_b = soup.select("article.product_pod")
+    # --- SHOP B ---
+    shop_b = soup.select(".product_pod")
     if shop_b:
-        for product in shop_b:
-            name_el = product.select_one("h3 a[title]")
-            price_el = product.select_one("p.price_color")
-            if name_el and price_el:
-                price_value, currency = parse_price(price_el.get_text(strip=True))
+        print("[Parser] Rozpoznano strukturę: Shop B")
+        products = []
+
+        for item in shop_b:
+            name = item.select_one("h3 a")
+            price = item.select_one(".price_color")
+
+            if name and price:
+                raw_price = price.get_text(strip=True)
                 products.append({
-                    "name": name_el["title"],
-                    "price": price_value,
-                    "currency": currency,
+                    "name": name.get("title"),
+                    "price": parse_price(raw_price),
+                    "currency": detect_currency(raw_price),
                 })
+
         return products
 
-    print("[Parser] Nie rozpoznano struktury strony.")
-    return products
+    # --- SHOP C (webscraper.io laptops) ---
+    shop_c = soup.select(".thumbnail")
+    if shop_c:
+        print("[Parser] Rozpoznano strukturę: Shop C (webscraper.io)")
+        products = []
 
+        for item in shop_c:
+            name_el = item.select_one(".title")
+            price_el = item.select_one(".pull-right.price")
+
+            if name_el and price_el:
+                raw_price = price_el.get_text(strip=True)
+                products.append({
+                    "name": name_el.get_text(strip=True),
+                    "price": parse_price(raw_price),
+                    "currency": detect_currency(raw_price),
+                })
+
+        return products
+
+
+    # --- KONIEC: brak dopasowania ---
+    print("[Parser] Nie rozpoznano struktury strony.")
+    return []   

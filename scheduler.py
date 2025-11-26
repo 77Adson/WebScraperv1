@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from fetcher import fetch_html
+from fetcher import fetch_with_fallback
 from parser import parse_products
 from storage import save_products
 
@@ -11,12 +11,26 @@ def run_scrape_once(urls: dict):
 
     for source, url in urls.items():
         print(f"[{source}] Pobieram dane...")
-        html = fetch_html(url)
+
+        # --- Krok 1: Requests ---
+        html = fetch_with_fallback(url)
+
         if not html:
-            print(f"[{source}] Błąd pobierania.")
+            print(f"[{source}] Błąd pobierania (Requests).")
             continue
 
         products = parse_products(html)
+
+        # --- Krok 2: Jeśli parser nic nie wykrył → Selenium ---
+        if len(products) == 0:
+            print(f"[{source}] Parser nic nie znalazł — próbuję Selenium...")
+
+            html = fetch_with_fallback(url, wait_selector=".thumbnail")  
+            # ".thumbnail" jest OGÓLNYM selektorem produktów dla wielu sklepów
+
+            if html:
+                products = parse_products(html)
+
         print(f"[{source}] Znaleziono {len(products)} produktów.")
         save_products(products, source)
 

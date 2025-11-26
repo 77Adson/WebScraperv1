@@ -7,6 +7,8 @@ def main():
     urls = {
         "Shop A": "https://scrapeme.live/shop/",
         "Shop B": "https://books.toscrape.com/catalogue/category/books_1/index.html",
+        "Shop C": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops",
+
     }
 
     print("Wybierz tryb:")
