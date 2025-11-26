@@ -13,7 +13,7 @@ def init_db():
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_zdarzenia TIMESTAMP NOT NULL,
+            data_zdarzenia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             kategoria TEXT NOT NULL,
             wartosc REAL NOT NULL,
             waluta TEXT,
@@ -30,9 +30,7 @@ def save_products(products: list[dict], source: str):
     if not products:
         return
 
-    now = datetime.now()
     df = pd.DataFrame(products)
-    df['data_zdarzenia'] = now
     df['region'] = source
     df.rename(columns={'name': 'kategoria', 'price': 'wartosc', 'currency': 'waluta'}, inplace=True)
 

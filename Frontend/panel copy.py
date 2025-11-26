@@ -19,6 +19,7 @@ def load_data():
     
     if not db_path.exists():
         st.error(f"Plik bazy danych nie został znaleziony! Oczekiwano go pod ścieżką: {db_path}")
+        st.info("Upewnij się, że backend (scraper) zapisał dane w odpowiednim miejscu.")
         return pd.DataFrame({
             'data_zdarzenia': pd.Series(dtype='datetime64[ns]'),
             'kategoria': pd.Series(dtype='object'),
@@ -37,6 +38,9 @@ def load_data():
 
 
 df_oryginal = load_data()
+
+st.subheader("Data loaded from database")
+st.dataframe(df_oryginal)
 
 # --- 3. PASEK BOCZNY Z FILTRAMI ---
 st.sidebar.header("Opcje Filtrowania")
@@ -108,8 +112,7 @@ if wybrany_sklep:
     df_filtrowane = df_filtrowane[df_filtrowane['region'] == wybrany_sklep]
 
     # 2. Filtr kategorii (zawsze filtruj wg wybranych)
-    if wybrana_kategoria:
-        df_filtrowane = df_filtrowane[df_filtrowane['kategoria'].isin(wybrana_kategoria)]
+    df_filtrowane = df_filtrowane[df_filtrowane['kategoria'].isin(wybrana_kategoria)]
 
     # 3. Filtr daty
     if len(zakres_dat) == 2:
@@ -127,6 +130,9 @@ else:
     # Jeśli żaden sklep nie jest wybrany, df_filtrowane pozostaje puste,
     # aby nie wyświetlać danych, dopóki użytkownik nie dokona wyboru.
     df_filtrowane = pd.DataFrame(columns=df_oryginal.columns)
+
+st.subheader("Data after filtering")
+st.dataframe(df_filtrowane)
 
 # --- 5. WYŚWIETLANIE WYNIKÓW ---
 if not wybrany_sklep:
@@ -195,3 +201,5 @@ else:
     st.warning("Brak danych do wyświetlenia dla wybranych filtrów. Spróbuj zmienić kryteria filtrowania.")
     if df_oryginal.empty:
         st.info("Wygląda na to, że baza danych jest pusta. Uruchom najpierw scraper, aby zebrać dane.")
+        
+# --- INFORMACJE W PASKU BOCZNYM ---
