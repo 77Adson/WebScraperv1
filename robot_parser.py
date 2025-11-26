@@ -1,5 +1,9 @@
 from urllib import robotparser
 from urllib.parse import urlparse
+import logging
+
+# Konfiguracja podstawowego loggera
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class RobotManager:
     def __init__(self):
@@ -14,15 +18,19 @@ class RobotManager:
                 rp.read()
                 self.parsers[domain] = rp
             except Exception as e:
-                print(f"Error reading robots.txt for {domain}: {e}")
-                # Assume we can fetch if robots.txt is unavailable
+                logging.warning(f"Nie można odczytać pliku robots.txt dla domeny {domain}: {e}. Przyjmuję, że można pobierać.")
+                # Zapisujemy None, aby nie próbować ponownie dla tej samej domeny
+                self.parsers[domain] = None
                 return True
         
         parser = self.parsers.get(domain)
         if parser:
-            return parser.can_fetch(user_agent, url)
+            allowed = parser.can_fetch(user_agent, url)
+            if not allowed:
+                logging.info(f"URL odrzucony przez robots.txt: {url} (User-agent: {user_agent})")
+            return allowed
         
-        # Default to true if parser not found for any reason
+        # Domyślnie zezwalaj, jeśli parser nie został znaleziony (np. błąd odczytu)
         return True
 
 # Global instance
