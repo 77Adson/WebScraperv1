@@ -70,24 +70,7 @@ if st.sidebar.button("Uruchom jednorazowe pobranie"):
     except Exception as e:
         st.sidebar.error(f"Błąd podczas pobierania: {e}")
 
-st.sidebar.subheader("Scraper Cykliczny")
-minutes = st.sidebar.number_input(
-    "Co ile minut wykonywać pobranie?",
-    min_value=1,
-    value=60,
-    step=1
-)
 
-if st.sidebar.button("Uruchom cykliczne pobieranie"):
-    try:
-        # Uwaga: Streamlit zakończy działanie tego procesu, jeśli aplikacja zostanie zamknięta.
-        # To jest uproszczona implementacja.
-        with st.spinner(f"Uruchamiam cykliczne pobieranie co {minutes} minut..."):
-            run_scheduler(URLS, interval_minutes=minutes)
-        st.sidebar.success("Scheduler został uruchomiony.")
-        st.info("Pamiętaj, że scheduler działa tylko, gdy ta aplikacja jest aktywna.")
-    except Exception as e:
-        st.sidebar.error(f"Błąd podczas uruchamiania schedulera: {e}")
 
 
 st.title("📊 Dashboard Analizy Danych")
