@@ -91,10 +91,11 @@ alerts_enabled = st.sidebar.checkbox(
 )
 
 if st.sidebar.button("Zapisz ustawienia email"):
-    config = {"email_address": email_address, "alerts_enabled": alerts_enabled}
+    config['email_address'] = email_address
+    config['alerts_enabled'] = alerts_enabled
     try:
         with open("config.json", "w") as f:
-            json.dump(config, f)
+            json.dump(config, f, indent=4) # Dodano indent dla czytelności
         st.sidebar.success("Ustawienia email zostały zapisane!")
     except Exception as e:
         st.sidebar.error(f"Błąd zapisu konfiguracji: {e}")
