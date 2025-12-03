@@ -1,7 +1,7 @@
 # === Środowisko wirtualne ===
 # Ignoruj standardowe nazwy folderów dla wirtualnych środowisk Pythona
 venv/
-.venv/
+.venv
 env/
 .env/
 ENV/

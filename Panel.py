@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 import plotly.express as px
+import json
 from scheduler import run_scrape_once, run_scheduler
 from storage import init_db
 
@@ -70,6 +71,33 @@ if st.sidebar.button("Uruchom jednorazowe pobranie"):
     except Exception as e:
         st.sidebar.error(f"Błąd podczas pobierania: {e}")
 
+# --- Konfiguracja powiadomień email ---
+st.sidebar.subheader("Powiadomienia Email")
+
+# Wczytaj bieżącą konfigurację
+try:
+    with open("config.json", "r") as f:
+        config = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    config = {"email_address": "", "alerts_enabled": False}
+
+email_address = st.sidebar.text_input(
+    "Adres email do powiadomień",
+    value=config.get("email_address", "")
+)
+alerts_enabled = st.sidebar.checkbox(
+    "Włącz powiadomienia",
+    value=config.get("alerts_enabled", False)
+)
+
+if st.sidebar.button("Zapisz ustawienia email"):
+    config = {"email_address": email_address, "alerts_enabled": alerts_enabled}
+    try:
+        with open("config.json", "w") as f:
+            json.dump(config, f)
+        st.sidebar.success("Ustawienia email zostały zapisane!")
+    except Exception as e:
+        st.sidebar.error(f"Błąd zapisu konfiguracji: {e}")
 
 
 
