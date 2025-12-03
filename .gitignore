@@ -25,3 +25,5 @@ db.sqlite3
 # Zrzuty bazy danych (używaj ostrożnie, jeśli masz w repozytorium pliki .sql, które chcesz śledzić)
 # *.sql
 # *.dump
+
+config.json
