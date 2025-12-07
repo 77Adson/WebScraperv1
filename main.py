@@ -25,21 +25,21 @@ def main():
         except ValueError:
             print("Nieprawidłowa wartość. Podaj liczbę całkowitą.")
 
-    # Check for robots.txt disabling
-    while True:
-        no_robots_str = input("Czy wyłączyć sprawdzanie pliku robots.txt? (t/n, domyślnie: n): ").lower()
-        if not no_robots_str or no_robots_str == 'n':
-            no_robots = False
-            break
-        elif no_robots_str == 't':
-            no_robots = True
-            break
-        else:
-            print("Nieprawidłowa odpowiedź. Wpisz 't' lub 'n'.")
+    # Wczytaj konfigurację
+    config = {}
+    try:
+        with open("config.json", "r") as f:
+            config = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Plik config.json nie znaleziony lub jest pusty. Używam domyślnych ustawień.")
 
-    if no_robots:
+    # Ustawienia robots.txt
+    if not config.get("respect_robots_txt", True):
         robot_manager.disabled = True
-        print("Sprawdzanie robots.txt jest wyłączone.")
+        print("Sprawdzanie robots.txt jest wyłączone (zgodnie z config.json).")
+    else:
+        robot_manager.disabled = False
+        print("Sprawdzanie robots.txt jest włączone (zgodnie z config.json).")
 
     init_db()
 
@@ -49,12 +49,8 @@ def main():
         "Shop C": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops",
     }
 
-    # Wczytaj konfigurację email
-    try:
-        with open("config.json", "r") as f:
-            email_config = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        email_config = None
+    # Ustawienia email
+    email_config = config if "sender_email" in config else None
 
     print(f"Uruchamianie cyklicznego pobierania danych co {interval} minut...")
     if email_config and email_config.get("alerts_enabled"):

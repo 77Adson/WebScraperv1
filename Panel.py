@@ -4,8 +4,9 @@ import sqlite3
 from pathlib import Path
 import plotly.express as px
 import json
-from scraper.scheduler import run_scrape_once, run_scheduler
+from scraper.scheduler import run_scrape_once
 from scraper.storage import init_db
+from scraper.robot_parser import robot_manager
 
 # --- URLs to scrape ---
 URLS = {
@@ -13,6 +14,18 @@ URLS = {
     "Shop B": "https://books.toscrape.com/catalogue/category/books_1/index.html",
     "Shop C": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops",
 }
+
+# --- 0. Wczytywanie konfiguracji ---
+@st.cache_data
+def load_config():
+    """Wczytuje konfigurację z pliku config.json."""
+    try:
+        with open("config.json", "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+config = load_config()
 
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(
@@ -47,7 +60,7 @@ def load_data():
 
 df_oryginal = load_data()
 
-# --- PASEK BOCZny - KONTROLA SCRAPERA ---
+# --- PASEK BOCZNY - KONTROLA SCRAPERA ---
 st.sidebar.header("Panel Sterowania Scraperem")
 
 if st.sidebar.button("Utwórz/Zresetuj bazę danych"):
@@ -55,7 +68,7 @@ if st.sidebar.button("Utwórz/Zresetuj bazę danych"):
         init_db()
         st.sidebar.success("Baza danych została pomyślnie zainicjowana!")
         st.cache_data.clear() # Czyści cache, aby wymusić ponowne załadowanie danych
-        st.experimental_rerun()
+        st.rerun()
     except Exception as e:
         st.sidebar.error(f"Błąd inicjalizacji bazy: {e}")
 
@@ -63,23 +76,30 @@ st.sidebar.subheader("Uruchamianie Scrapera")
 
 if st.sidebar.button("Uruchom jednorazowe pobranie"):
     try:
+        # Ustawienia robots.txt na podstawie config.json
+        if not config.get("respect_robots_txt", True):
+            robot_manager.disabled = True
+            st.sidebar.info("Sprawdzanie robots.txt jest wyłączone (zgodnie z config.json).")
+        else:
+            robot_manager.disabled = False
+        
         with st.spinner("Trwa pobieranie danych..."):
             run_scrape_once(URLS)
+
         st.sidebar.success("Jednorazowe pobieranie zakończone!")
         st.cache_data.clear()
-        st.experimental_rerun()
+        st.rerun()
     except Exception as e:
         st.sidebar.error(f"Błąd podczas pobierania: {e}")
 
-# --- Konfiguracja powiadomień email ---
-st.sidebar.subheader("Powiadomienia Email")
 
-# Wczytaj bieżącą konfigurację
-try:
-    with open("config.json", "r") as f:
-        config = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-    config = {"email_address": "", "alerts_enabled": False}
+# --- Konfiguracja powiadomień email ---
+st.sidebar.subheader("Powiadomienia Email i Robots.txt")
+
+respect_robots = st.sidebar.checkbox(
+    "Respektuj robots.txt",
+    value=config.get("respect_robots_txt", True)
+)
 
 email_address = st.sidebar.text_input(
     "Adres email do powiadomień",
@@ -90,13 +110,15 @@ alerts_enabled = st.sidebar.checkbox(
     value=config.get("alerts_enabled", False)
 )
 
-if st.sidebar.button("Zapisz ustawienia email"):
+if st.sidebar.button("Zapisz ustawienia"):
+    config['respect_robots_txt'] = respect_robots
     config['email_address'] = email_address
     config['alerts_enabled'] = alerts_enabled
     try:
         with open("config.json", "w") as f:
-            json.dump(config, f, indent=4) # Dodano indent dla czytelności
-        st.sidebar.success("Ustawienia email zostały zapisane!")
+            json.dump(config, f, indent=4)
+        st.sidebar.success("Ustawienia zostały zapisane!")
+        st.cache_data.clear() # Wyczyść cache, aby odświeżyć konfigurację
     except Exception as e:
         st.sidebar.error(f"Błąd zapisu konfiguracji: {e}")
 

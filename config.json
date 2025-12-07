@@ -4,5 +4,6 @@
     "sender_email": "kaitlin65@ethereal.email",
     "email_password": "8XJkRC4qUv9KJaXVh8",
     "smtp_server": "smtp.ethereal.email",
-    "smtp_port": 587
+    "smtp_port": 587,
+    "respect_robots_txt": false
 }
