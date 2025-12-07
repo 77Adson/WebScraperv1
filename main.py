@@ -1,14 +1,25 @@
 import json
-from scheduler import run_scheduler
-from storage import init_db
+import argparse
+from scraper.scheduler import run_scheduler
+from scraper.storage import init_db
+from scraper.robot_parser import robot_manager
 
 def main():
     """
     Główna funkcja uruchamiająca cykliczne scrapowanie.
 
     Ten skrypt inicjalizuje bazę danych i uruchamia scheduler, który
-    cyklicznie pobiera dane z predefiniowanych adresów URL co 60 minut.
+    cyklicznie pobiera dane z predefiniowanych adresów URL.
     """
+    parser = argparse.ArgumentParser(description="Uruchamia cykliczne scrapowanie.")
+    parser.add_argument("--interval", type=int, default=60, help="Interwał scrapowania w minutach (domyślnie: 60).")
+    parser.add_argument("--no-robots", action="store_true", help="Wyłącza sprawdzanie pliku robots.txt.")
+    args = parser.parse_args()
+
+    if args.no_robots:
+        robot_manager.disabled = True
+        print("Sprawdzanie robots.txt jest wyłączone.")
+
     init_db()
 
     urls = {
@@ -24,7 +35,7 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         email_config = None
 
-    print("Uruchamianie cyklicznego pobierania danych co 60 minut...")
+    print(f"Uruchamianie cyklicznego pobierania danych co {args.interval} minut...")
     if email_config and email_config.get("alerts_enabled"):
         print(f"Powiadomienia email włączone. Wysyłanie na: {email_config.get('email_address')}")
     else:
@@ -32,7 +43,7 @@ def main():
     print("Aby zatrzymać, naciśnij Ctrl+C.")
     
     try:
-        run_scheduler(urls, interval_minutes=60, email_config=email_config)
+        run_scheduler(urls, interval_minutes=args.interval, email_config=email_config)
     except KeyboardInterrupt:
         print("\nZatrzymano cykliczne pobieranie.")
     except Exception as e:

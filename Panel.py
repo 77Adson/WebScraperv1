@@ -4,8 +4,8 @@ import sqlite3
 from pathlib import Path
 import plotly.express as px
 import json
-from scheduler import run_scrape_once, run_scheduler
-from storage import init_db
+from scraper.scheduler import run_scrape_once, run_scheduler
+from scraper.storage import init_db
 
 # --- URLs to scrape ---
 URLS = {

@@ -1,9 +1,9 @@
 import time
 from datetime import datetime
-from fetcher import fetch_with_fallback
-from parser import parse_products
-from storage import save_products
-from email_alerter import send_email_alert
+from .fetcher import fetch_with_fallback
+from .parser import parse_products
+from .storage import save_products
+from .email_alerter import send_email_alert
 
 def run_scrape_once(urls: dict):
     """

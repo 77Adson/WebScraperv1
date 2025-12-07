@@ -7,8 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
-from rate_limiter import limiter
-from robot_parser import robot_manager
+from .rate_limiter import limiter
+from .robot_parser import robot_manager
 from urllib.parse import urlparse
 
 def create_driver():
