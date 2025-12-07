@@ -1,8 +1,8 @@
 {
     "email_address": "test@mail",
     "alerts_enabled": true,
-    "sender_email": "josephine.wiza51@ethereal.email",
-    "email_password": "T6re6skS4aUjZ4pMrQ",
+    "sender_email": "kaitlin65@ethereal.email",
+    "email_password": "8XJkRC4qUv9KJaXVh8",
     "smtp_server": "smtp.ethereal.email",
     "smtp_port": 587
 }
