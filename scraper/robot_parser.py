@@ -8,8 +8,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class RobotManager:
     def __init__(self):
         self.parsers = {}
+        self.disabled = False
 
     def can_fetch(self, url, user_agent='*'):
+        if self.disabled:
+            return True
+            
         domain = urlparse(url).scheme + "://" + urlparse(url).netloc
         if domain not in self.parsers:
             rp = robotparser.RobotFileParser()

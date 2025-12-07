@@ -5,6 +5,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+<<<<<<< HEAD:selenium_fetcher.py
+=======
+from .rate_limiter import limiter
+from .robot_parser import robot_manager
+>>>>>>> origin/main:scraper/selenium_fetcher.py
 from urllib.parse import urlparse
 
 from webdriver_manager.chrome import ChromeDriverManager

@@ -1,8 +1,8 @@
 import requests
 from requests.exceptions import HTTPError
-from selenium_fetcher import fetch_html_selenium
-from rate_limiter import limiter
-from robot_parser import robot_manager
+from .selenium_fetcher import fetch_html_selenium
+from .rate_limiter import limiter
+from .robot_parser import robot_manager
 from urllib.parse import urlparse
 
 def fetch_html(url, retries=1):
