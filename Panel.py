@@ -7,6 +7,7 @@ import json
 from scraper.scheduler import run_scrape_once
 from scraper.storage import init_db
 from scraper.robot_parser import robot_manager
+from analyzer import detect_price_changes
 
 # --- URLs to scrape ---
 URLS = {
@@ -205,55 +206,78 @@ else:
 if not wybrany_sklep:
     st.info("Proszę wybrać sklep z panelu po lewej stronie, aby rozpocząć analizę.")
 elif not df_filtrowane.empty:
-    st.header("Kluczowe Wskaźniki (KPIs)")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Liczba Rekordów", f"{len(df_filtrowane):,}")
-    col2.metric("Łączna Wartość", f"{df_filtrowane['wartosc'].sum():,.2f} PLN")
-    col3.metric("Średnia Wartość", f"{df_filtrowane['wartosc'].mean():,.2f} PLN")
-    col4.metric("Liczba Kategorii", df_filtrowane['kategoria'].nunique())
-    
-    st.markdown("---")
-    
-    st.header("Wizualizacje Danych")
-    fig_col1, fig_col2 = st.columns(2)
-    
-    with fig_col1:
-        st.subheader("Trend wartości w czasie")
-        fig_czas = px.line(
-            df_filtrowane,
-            x='data_zdarzenia',
-            y='wartosc',
-            facet_row='kategoria',
-            labels={'data_zdarzenia': 'Data', 'wartosc': 'Suma wartości', 'kategoria': 'Kategoria'},
-            markers=True
+        st.header("Obecne ceny produktów")
+        df_ceny = df_filtrowane.sort_values('data_zdarzenia').groupby('kategoria').tail(1)
+        fig_ceny = px.bar(
+            df_ceny, 
+            x='wartosc', 
+            y='kategoria', 
+            orientation='h', 
+            labels={'kategoria': 'Produkt', 'wartosc': 'Obecna cena'},
+            title="Ostatnia zarejestrowana cena dla wybranych produktów"
         )
-        fig_czas.update_yaxes(title_text="")
-        fig_czas.update_xaxes(tickformat='%Y-%m-%d<br>%H:%M:%S')
-        fig_czas.update_layout(height=max(400, 200 * df_filtrowane['kategoria'].nunique()))
-        st.plotly_chart(fig_czas, use_container_width=True)
-        
-        st.subheader("Rozkład produktów wg kategorii")
-        df_wykres_kategorie_pie = df_filtrowane['kategoria'].value_counts().reset_index()
-        df_wykres_kategorie_pie.columns = ['kategoria', 'liczba']
-        fig_pie_kategoria = px.pie(df_wykres_kategorie_pie, names='kategoria', values='liczba')
-        st.plotly_chart(fig_pie_kategoria, use_container_width=True)
-        
-    with fig_col2:
-        st.subheader("Suma wartości wg kategorii")
-        df_wykres_kategorie_bar = df_filtrowane.groupby('kategoria')['wartosc'].sum().sort_values(ascending=False).reset_index()
-        fig_bar_kategoria = px.bar(df_wykres_kategorie_bar, x='wartosc', y='kategoria', orientation='h', labels={'kategoria': 'Kategoria', 'wartosc': 'Suma wartości'})
-        st.plotly_chart(fig_bar_kategoria, use_container_width=True)
-        
-        st.subheader("Liczba rekordów wg regionu")
-        df_wykres_region = df_filtrowane['region'].value_counts().reset_index()
-        df_wykres_region.columns = ['region', 'liczba']
-        fig_bar_region = px.bar(df_wykres_region, x='liczba', y='region', orientation='h', labels={'region': 'Region', 'liczba': 'Liczba rekordów'})
-        st.plotly_chart(fig_bar_region, use_container_width=True)
-        
-    st.markdown("---")
+        st.plotly_chart(fig_ceny, use_container_width=True)
     
-    st.header("Surowe dane po filtrowaniu")
-    st.dataframe(df_filtrowane, use_container_width=True)
+        st.markdown("---")
+        
+        st.header("Analiza trendów dla wybranych produktów")
+    
+        if not wybrana_kategoria:
+            st.info("Wybierz co najmniej jeden produkt z filtrów powyżej, aby zobaczyć analizę trendu.")
+        else:
+            # Uruchom analizę zmian cen
+            # Konwersja DataFrame do formatu listy krotek oczekiwanego przez analyzer
+            history_list = [tuple(row) for row in df_filtrowane[['kategoria', 'wartosc', 'region', 'data_zdarzenia']].to_numpy()]
+            price_changes = detect_price_changes(history_list)
+    
+            for produkt in wybrana_kategoria:
+                st.markdown(f"---")
+                st.subheader(f"Analiza produktu: {produkt}")
+                
+                df_produkt = df_filtrowane[df_filtrowane['kategoria'] == produkt]
+                
+                if df_produkt.empty:
+                    st.warning(f"Brak danych dla produktu '{produkt}' w wybranym zakresie.")
+                    continue
+    
+                col_info, col_chart = st.columns([1, 2])
+    
+                with col_info:
+                    # Obliczanie statystyk
+                    aktualna_cena = df_produkt.sort_values('data_zdarzenia')['wartosc'].iloc[-1]
+                    najwyzsza_cena = df_produkt['wartosc'].max()
+                    najnizsza_cena = df_produkt['wartosc'].min()
+                    
+                    st.metric("Aktualna cena", f"{aktualna_cena:,.2f} PLN")
+                    st.metric("Najniższa cena w okresie", f"{najnizsza_cena:,.2f} PLN")
+                    st.metric("Najwyższa cena w okresie", f"{najwyzsza_cena:,.2f} PLN")
+                    
+                    # Informacje z analizatora
+                    zmiana_procentowa = price_changes.get(produkt)
+                    if zmiana_procentowa is not None:
+                        st.metric(
+                            label="Zmiana ceny w okresie",
+                            value=f"{zmiana_procentowa:.1f}%",
+                            delta=f"{zmiana_procentowa:.1f}%"
+                        )
+                    else:
+                        st.info("Brak znaczących zmian cen w wybranym okresie.")
+    
+                with col_chart:
+                    # Wykres trendu dla pojedynczego produktu
+                    fig_produkt = px.line(
+                        df_produkt,
+                        x='data_zdarzenia',
+                        y='wartosc',
+                        title=f"Historia ceny dla: {produkt}",
+                        markers=True,
+                        labels={'data_zdarzenia': 'Data', 'wartosc': 'Cena'}
+                    )
+                    fig_produkt.update_xaxes(tickformat='%Y-%m-%d %H:%M')
+                    st.plotly_chart(fig_produkt, use_container_width=True)
+    
+        st.header("Surowe dane po filtrowaniu")
+        st.dataframe(df_filtrowane, use_container_width=True)
     
 else:
     st.warning("Brak danych do wyświetlenia dla wybranych filtrów. Spróbuj zmienić kryteria filtrowania.")
