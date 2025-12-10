@@ -3,10 +3,26 @@ import re
 
 # --- waluty ---
 def parse_price(text):
-    text = text.replace(",", ".")
+    """
+    Parses a string to find a price and convert it to a float.
+    Handles both '.' and ',' as decimal separators, and ',' as a thousand separator.
+    """
+    if not text:
+        return None
+
+    # For formats like "1,234.56", remove thousand separators
+    if ',' in text and '.' in text:
+        text = text.replace(',', '')
+    # For formats like "123,45", treat comma as a decimal point
+    else:
+        text = text.replace(',', '.')
+    
     numbers = re.findall(r"[\d.]+", text)
     if numbers:
-        return float(numbers[0])
+        try:
+            return float(numbers[0])
+        except ValueError:
+            return None # Handle cases like "1.2.3"
     return None
 
 def detect_currency(text):

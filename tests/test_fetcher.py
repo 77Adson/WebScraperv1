@@ -46,7 +46,8 @@ class TestFetchHTML(unittest.TestCase):
         # Arrange
         mock_robot_manager.can_fetch.return_value = True
         mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = unittest.mock.Mock(side_effect=requests.exceptions.HTTPError(response=MagicMock(status_code=404)))
+        http_error = requests.exceptions.HTTPError(response=MagicMock(status_code=404))
+        mock_response.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_response
         
         # Act
@@ -77,18 +78,16 @@ class TestFetchHTML(unittest.TestCase):
         mock_robot_manager.can_fetch.return_value = True
         
         # First call raises 429, second call is successful
-        error_response = MagicMock()
-        error_response.status_code = 429
-        
-        http_error = requests.exceptions.HTTPError(response=error_response)
-        http_error.response = error_response
+        mock_429_response = MagicMock()
+        error_response_obj = MagicMock(status_code=429)
+        http_error = requests.exceptions.HTTPError(response=error_response_obj)
+        mock_429_response.raise_for_status.side_effect = http_error
 
         success_response = MagicMock()
         success_response.text = "<html>Success</html>"
-        success_response.raise_for_status = MagicMock()
-
+        
         mock_get.side_effect = [
-            unittest.mock.Mock(side_effect=http_error),
+            mock_429_response,
             success_response
         ]
         

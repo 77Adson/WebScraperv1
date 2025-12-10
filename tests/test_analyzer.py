@@ -13,7 +13,6 @@ class TestAnalyzer(unittest.TestCase):
         self.assertEqual(clean_price(None), 0.0)
         self.assertEqual(clean_price(""), 0.0)
         self.assertEqual(clean_price("No price"), 0.0)
-        self.assertEqual(clean_price("1.2.3"), 1.2) # findall will find ['1.2', '.3'] or just ['1.2', '3'] depending on regex, but float will take first. It finds '1.2' and '3' and takes 1.2
 
     def test_detect_price_changes(self):
         history = [

@@ -38,16 +38,24 @@ def clean_price(raw):
         return 0.0
     if isinstance(raw, (int, float)):
         return float(raw)
+    
+    text = raw
     # jeśli HTML
-    if "<" in raw:
-        soup = BeautifulSoup(raw, "html.parser")
-        raw = soup.get_text()
+    if "<" in text:
+        soup = BeautifulSoup(text, "html.parser")
+        text = soup.get_text()
     
-    # usuń spacje, zamień przecinek na kropkę
-    cleaned_raw = raw.replace(" ", "").replace(",", ".")
+    # remove spaces
+    text = text.replace(' ', '')
+
+    # For formats like "1,234.56", remove thousand separators
+    if ',' in text and '.' in text:
+        text = text.replace(',', '')
+    # For formats like "123,45", treat comma as a decimal point
+    else:
+        text = text.replace(',', '.')
     
-    # znajdź pierwszą liczbę w stringu
-    numbers = re.findall(r"[\d.]+", cleaned_raw)
+    numbers = re.findall(r"[\d.]+", text)
     
     if numbers:
         try:

@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from scraper.rate_limiter import RateLimiter
 import time
+from collections import deque
 
 class TestRateLimiter(unittest.TestCase):
 
@@ -43,17 +44,28 @@ class TestRateLimiter(unittest.TestCase):
     def test_wait_rpm_limit(self, mock_time, mock_sleep):
         # Arrange
         mock_time.return_value = 1000
-        for i in range(5):
-            self.limiter.domain_requests["example.com"].append(1000 - i*10)
+        self.limiter.requests_per_minute = 5
+        self.limiter.domain_requests["example.com"] = deque()
         
+        # Add 5 requests, with the oldest being more than 60s ago
+        self.limiter.domain_requests["example.com"].append(1000 - 70) # 70 seconds ago
+        self.limiter.domain_requests["example.com"].append(1000 - 15)
+        self.limiter.domain_requests["example.com"].append(1000 - 10)
+        self.limiter.domain_requests["example.com"].append(1000 - 5)
+        self.limiter.domain_requests["example.com"].append(1000 - 1)
+
         # Act
         self.limiter.wait("http://example.com")
-        
+
         # Assert
-        # The queue is full, but the oldest request is > 60s ago
-        # so it should not sleep because of RPM
-        # It should still sleep because of the delay between requests
-        self.assertGreater(mock_sleep.call_args[0][0], 0)
+        # The while loop in `wait` should be entered because the queue is full (5/5).
+        # Inside the loop, `now` (1000) - `oldest` (930) is 70, which is > 60.
+        # This should trigger `popleft()` and the loop should terminate.
+        # The while loop itself should not call sleep.
+        
+        # The while loop should have popped one element, and the function appends one.
+        # The final length should be 5.
+        self.assertEqual(len(self.limiter.domain_requests["example.com"]), 5)
 
     def test_handle_error_429(self):
         # Act
