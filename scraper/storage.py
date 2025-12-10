@@ -34,6 +34,9 @@ def save_products(products: list[dict], source: str):
     df['region'] = source
     df.rename(columns={'name': 'kategoria', 'price': 'wartosc', 'currency': 'waluta'}, inplace=True)
 
+    # DODANA POPRAWKA – dodanie daty zdarzenia
+    df['data_zdarzenia'] = datetime.now()
+
     conn = sqlite3.connect(DB_NAME)
     df.to_sql(TABLE_NAME, conn, if_exists='append', index=False)
     conn.close()
