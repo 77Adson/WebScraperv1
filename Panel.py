@@ -278,6 +278,38 @@ elif not df_filtrowane.empty:
     
         st.header("Surowe dane po filtrowaniu")
         st.dataframe(df_filtrowane, use_container_width=True)
+
+
+        ################################# NOWE SPRINT 5 #############################################
+        # --- 5A. EKSPORT DANYCH DO CSV ---
+        st.markdown("### Eksport danych")
+
+        if df_filtrowane.empty:
+            st.info("Brak danych do eksportu dla wybranych filtrów.")
+        else:
+            csv_data = df_filtrowane.to_csv(index=False).encode('utf-8')
+
+            st.download_button(
+                label="Pobierz przefiltrowane dane jako CSV",
+                data=csv_data,
+                file_name="filtrowane_dane.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+        if not df_oryginal.empty:
+            csv_full = df_oryginal.to_csv(index=False).encode('utf-8')
+
+            st.download_button(
+                label="Pobierz CAŁĄ bazę danych jako CSV",
+                data=csv_full,
+                file_name="pelna_baza.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        st.markdown("---")
+        #######################################################
     
 else:
     st.warning("Brak danych do wyświetlenia dla wybranych filtrów. Spróbuj zmienić kryteria filtrowania.")
