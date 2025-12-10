@@ -91,7 +91,7 @@ def parse_products(html):
             if name_el and price_el:
                 raw_price = price_el.get_text(strip=True)
                 products.append({
-                    "name": name_el.get_text(strip=True),
+                    "name": name_el.get('title', name_el.get_text(strip=True)),
                     "price": parse_price(raw_price),
                     "currency": detect_currency(raw_price),
                 })
