@@ -64,6 +64,10 @@ df_oryginal = load_data()
 # --- PASEK BOCZNY - KONTROLA SCRAPERA ---
 st.sidebar.header("Panel Sterowania Scraperem")
 
+if st.sidebar.button("Odśwież dane z bazy"):
+    st.cache_data.clear()
+    st.rerun()
+
 if st.sidebar.button("Utwórz/Zresetuj bazę danych"):
     try:
         init_db()
