@@ -9,12 +9,12 @@ This project is a web scraping application that gathers data from multiple e-com
 - **Data Visualization**: Interactive charts and tables to visualize price trends.
 - **Manual Scrape**: Ability to trigger a scrape manually from the dashboard.
 - **Data Export**: Export scraped data to CSV.
-- **Email Alerts**: Optional email notifications for price changes.
+- **Email Alerts**: Optional email notifications.
 - **robots.txt**: Respects `robots.txt` by default.
 
 ## Project Structure
 
-- `main.py`: The main entry point for running the scraper from the command line.
+- `main.py`: The main entry point for running the cyclical scraper.
 - `Panel.py`: The Streamlit-based web dashboard.
 - `scraper/`: Directory containing the core scraping logic.
 - `requirements.txt`: A list of all the dependencies for this project.
@@ -74,8 +74,12 @@ From the dashboard, you can:
 
 ## Configuration
 
-The application can be configured using the `config.json` file. If the file does not exist, it will be created with default settings when you save settings in the web dashboard.
+The application can be configured using the `config.json` file. If the file does not exist, it will be created with default settings when you save settings in the web dashboard. These settings can also be configured from the web dashboard.
 
 - `respect_robots_txt`: Whether to follow the rules specified in the websites' `robots.txt` files (default: `true`).
 - `email_address`: The email address to which notifications will be sent.
 - `alerts_enabled`: Whether to enable email notifications (default: `false`).
+- `sender_email`: The email address from which notifications will be sent.
+- `sender_password`: The password for the sender's email account.
+
+**Note:** The application uses Ethereal Email for testing purposes. These are temporary accounts. You will need to manually update `sender_email` and `sender_password` in the `config.json` file with your own email credentials to receive email alerts.
